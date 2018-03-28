@@ -130,7 +130,7 @@ class ConsoleOutput:
         self.check_platform()
 
     def check_platform(self):
-        if system() == "Linux":
+        if system() == "Linux" or system() == "Darwin":
             self.info = '\033[1;34m' + '[*]' + '\033[0m' + ' '
             self.error = '\033[1;31m' + '[-]' + '\033[0m' + ' '
             self.success = '\033[1;32m' + '[+]' + '\033[0m' + ' '
