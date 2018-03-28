@@ -269,9 +269,7 @@ if __name__ == "__main__":
     parser.add_argument('-v', '--verbose', action='store_true', help='Verbose mode')
     parser.add_argument('-T', '--timeout', type=int, help='Set timeout (default: 1)', default='1')
     parser.add_argument('-V', '--validate_timeout', type=int, help='Set validate timeout (default: 1)', default='1')
-    parser.add_argument('-U', '--user_enumeration', action='store_true', help='Enumeration users')
-    parser.add_argument('-P', '--default_pass', type=str, help='Set default password (default: Qq123456)',
-                        default='Qq123456')
+    parser.add_argument('-P', '--password', type=str, help='Set password (default: Qq123456)', default='Qq123456')
     parser.add_argument('--proxy', type=str, help='Set proxy (example: https://127.0.0.1:8080)')
     args = parser.parse_args()
 
@@ -328,10 +326,8 @@ if __name__ == "__main__":
     print output.info + "Valid logins write to file: " + valid_login_file
     print output.info + "Successful login credentials write to file: " + valid_login_file
 
-    if args.user_enumeration:
-        password_list = []
-        password_list.append(args.default_pass)
-        print output.info + "Start users enumeration, default password: " + args.default_pass
+    password_list.append(args.password)
+    print output.info + "Password: " + args.password
 
     print output.info + "Number of threads: " + str(args.threads)
     print output.info + "Start brute ..."
