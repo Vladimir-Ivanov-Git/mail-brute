@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from sys import exit
 from sys import stdout
 from tm import ThreadManager
