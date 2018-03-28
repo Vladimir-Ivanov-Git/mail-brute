@@ -21,6 +21,8 @@ proxy = None
 timeout = 1
 validate_timeout = 1
 
+verbose = False
+
 valid_login_file = "owa_valid_login.log"
 successful_login_file = "owa_successful_login.log"
 
@@ -165,6 +167,8 @@ def brute(**positions):
     global validate_timeout
     global timeout
 
+    global verbose
+
     global login_list
     global password_list
 
@@ -218,11 +222,12 @@ def brute(**positions):
                             stdout.write("User exist: " + login_list[brute_index] + "\n")
                             with open(valid_login_file, "a") as out_file:
                                 out_file.write(login_list[brute_index] + "\n")
-                        # else:
-                        #     stdout.write("User does not exist: " + login_list[brute_index] + "\n")
+                        else:
+                            if verbose:
+                                stdout.write("User does not exist: " + login_list[brute_index] + "\n")
             except Timeout:
-                pass
-                # stdout.write("User does not exist: " + login_list[brute_index] + "\n")
+                if verbose:
+                    stdout.write("User does not exist: " + login_list[brute_index] + "\n")
 
 
 if __name__ == "__main__":
@@ -233,6 +238,7 @@ if __name__ == "__main__":
     parser.add_argument('-u', '--url', type=str, help='Set OWA URL (example: https://owa.test/com/)')
     parser.add_argument('-c', '--country', type=str, help='Set Country code (default: RU)', default='RU')
     parser.add_argument('-t', '--threads', type=int, help='Set number of threads (default: 10)', default='10')
+    parser.add_argument('-v', '--verbose', action='store_true', help='Verbose mode')
     parser.add_argument('-T', '--timeout', type=int, help='Set timeout (default: 1)', default='1')
     parser.add_argument('-V', '--validate_timeout', type=int, help='Set validate timeout (default: 1)', default='1')
     parser.add_argument('-U', '--user_enumeration', action='store_true', help='Enumeration users')
@@ -240,6 +246,9 @@ if __name__ == "__main__":
                         default='Qq123456')
     parser.add_argument('--proxy', type=str, help='Set proxy (example: https://127.0.0.1:8080)')
     args = parser.parse_args()
+
+    if args.verbose:
+        verbose = True
 
     if args.url is None:
         print "Please set URL (example: https://owa.test.com/)"
