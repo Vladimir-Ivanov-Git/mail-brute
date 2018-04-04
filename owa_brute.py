@@ -4,7 +4,6 @@ from sys import exit
 from sys import stdout
 from tm import ThreadManager
 from argparse import ArgumentParser
-from string import ascii_lowercase
 from time import sleep
 from re import match
 from random import choice
@@ -144,34 +143,70 @@ class ConsoleOutput:
             self.warning = '[!] '
 
 
-def create_login_list(country='ru'):
+def create_login_list(country='ru', use_full_name=False):
     try:
         surnames_file = open(os.getcwd() + '/surnames/' + country.lower() + '.txt')
+        names_file = open(os.getcwd() + '/names/' + country.lower() + '.txt')
     except IOError:
         print "This country code: \"" + country.upper() + "\" not yet supported!"
         exit(1)
-    name_list = list(ascii_lowercase)
 
+    first_letter_name_list = []
+    name_list = []
+    names_file.seek(0)
+
+    for name in names_file.readlines():
+        name = name.replace('\n', '')
+        login_list.append(name)
+        if use_full_name:
+            name_list.append(name)
+        if name[:1] not in first_letter_name_list:
+            first_letter_name_list.append(name[:1])
+
+    surnames_file.seek(0)
     surname = surnames_file.readline()
+    female_surname = None
+
     while surname:
         surname = surname.replace('\n', '')
-        login_list.append(surname)
+
         if country == "ru":
             if not surname.endswith('o'):
                 if surname.endswith('iy'):
-                    login_list.append(surname[:-2] + 'aya')
+                    female_surname = surname[:-2] + 'aya'
                 else:
-                    login_list.append(surname + 'a')
-        for name in name_list:
-            login_list.append(name + '.' + surname)
-            if not surname.endswith('o'):
-                if surname.endswith('iy'):
-                    login_list.append(name + '.' + surname[:-2] + 'aya')
+                    female_surname = surname + 'a'
+            else:
+                female_surname = None
+
+        login_list.append(surname)
+        if female_surname is not None:
+            login_list.append(female_surname)
+
+        for first_letter_name in first_letter_name_list:
+            login_list.append(first_letter_name + '.' + surname)
+            if female_surname is not None:
+                login_list.append(first_letter_name + '.' + female_surname)
+
+        if use_full_name:
+            for name in name_list:
+                if female_surname is not None:
+                    if name.endswith('a'):
+                        login_list.append(name + '.' + female_surname)
+                    else:
+                        login_list.append(name + '.' + surname)
                 else:
-                    login_list.append(name + '.' + surname + 'a')
+                    login_list.append(name + '.' + surname)
 
         surname = surnames_file.readline()
+
+    # For debug
+    with open('big_users_list.txt', 'a') as logins_file:
+        for login in login_list:
+            logins_file.write(login + '\n')
+
     surnames_file.close()
+    names_file.close()
 
 
 def brute(**positions):
@@ -267,6 +302,7 @@ if __name__ == "__main__":
     parser.add_argument('-c', '--country', type=str, help='Set Country code (default: RU)', default='RU')
     parser.add_argument('-t', '--threads', type=int, help='Set number of threads (default: 10)', default='10')
     parser.add_argument('-v', '--verbose', action='store_true', help='Verbose mode')
+    parser.add_argument('-f', '--full_names', action='store_true', help='Use full names (a.jones -> alex.jones)')
     parser.add_argument('-T', '--timeout', type=int, help='Set timeout (default: 1)', default='1')
     parser.add_argument('-V', '--validate_timeout', type=int, help='Set validate timeout (default: 1)', default='1')
     parser.add_argument('-P', '--password', type=str, help='Set password (default: Qq123456)', default='Qq123456')
@@ -313,7 +349,7 @@ if __name__ == "__main__":
             print output.error + "Bad Country code (2 letters, example: RU)"
             exit(1)
         else:
-            create_login_list(args.country)
+            create_login_list(args.country.lower(), args.full_names)
 
     timeout = int(args.timeout)
 
